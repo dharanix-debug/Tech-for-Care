@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tech for Care Dashboard Demo</title>
+<style>
+  body { font-family: Arial,sans-serif; margin:0; padding:0; background:#f0f4f8; transition:0.3s; }
+  body.dark { background:#121212; color:#e0e0e0; }
+
+  header { 
+    background:#2b7a78; 
+    color:white; 
+    padding:20px; 
+    display:flex; 
+    flex-direction: column; 
+    align-items: center; 
+    text-align: center; 
+  }
+  
+  .header-main { display: flex; align-items: center; gap:15px; justify-content: center; flex-wrap: wrap; }
+  .header-main img { height:60px; border-radius:10px; }
+  .header-main h1 { margin:0; font-size:1.8em; }
+  .small { font-size:0.9em; color:#fff; margin-top:5px; }
+
+  .container { max-width:900px; margin:20px auto; padding:0 15px; }
+  .card { background:#fff; padding:20px; margin-bottom:15px; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1); transition:0.3s; }
+  body.dark .card { background:#1e1e1e; color:#e0e0e0; box-shadow:0 4px 10px rgba(255,255,255,0.05); }
+
+  .btn { background:#3aa3a0; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; margin:5px 5px 0 0; }
+  .btn.secondary { background:#17252a; }
+  .btn:hover { background:#2b7a78; }
+  select,input,textarea{padding:8px; margin:5px 0; width:100%; border-radius:5px; border:1px solid #ccc; }
+  .hidden{display:none;}
+  .toast {position:fixed; top:20px; right:20px; padding:12px 20px; border-radius:8px; background:#28a745; color:white; opacity:0; pointer-events:none; transition:0.5s;}
+  .toast.show{opacity:1; pointer-events:auto;}
+  .badge{display:inline-block; padding:2px 6px; border-radius:6px; font-size:0.8em; margin-left:5px; color:#fff;}
+  .Health{background:#28a745;}
+  .Food{background:#ff9800;}
+  .Education{background:#2196f3;}
+  .Others{background:#9c27b0;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-main">
+    <img src="techforcarelogo.jpg" alt="Tech for Care Logo">
+    <h1>Tech for Care</h1>
+  </div>
+  <div class="small">
+    Centralized Website to Support Orphanages and Old Age Homes with NGO Collaboration
+  </div>
+  <button id="toggleMode" class="btn secondary" style="margin-top:10px;">🌗 Toggle Mode</button>
+  <button id="viewHistory" class="btn" style="margin-top:10px;">📜 View History</button>
+</header>
+
+<div class="container">
+
+  <!-- Step 1: Login -->
+  <div id="loginStep" class="card">
+    <h3>Login / Signup (Demo)</h3>
+    <input id="demoName" placeholder="Enter any name/email" />
+    <input id="demoPassword" type="password" placeholder="Enter password" />
+    <button id="btnLogin" class="btn">Continue</button>
+  </div>
+
+  <!-- Step 2: Choose -->
+  <div id="choiceStep" class="card hidden">
+    <h3>Welcome, <span id="userName"></span>!</h3>
+    <p>Select your action:</p>
+    <button id="btnVolunteer" class="btn">Volunteer / Donor Dashboard</button>
+    <button id="btnSupport" class="btn secondary">Support Requests Dashboard</button>
+  </div>
+
+  <!-- Volunteer Dashboard -->
+  <div id="volDashboard" class="card hidden">
+    <h3>Support Requests</h3>
+    <input id="searchVol" placeholder="Search requests by keyword">
+    <select id="filterSectorVol">
+      <option value="">All Sectors</option>
+      <option value="Health">Health</option>
+      <option value="Food">Food</option>
+      <option value="Education">Education</option>
+      <option value="Others">Others</option>
+    </select>
+    <div id="volList"></div>
+
+    <h4>Offer Your Help</h4>
+    <input id="volName" placeholder="Your Name" />
+    <select id="volSector">
+      <option value="Health">Health</option>
+      <option value="Food">Food</option>
+      <option value="Education">Education</option>
+      <option value="Others">Others</option>
+    </select>
+    <textarea id="volMsg" placeholder="What can you offer?"></textarea>
+    <button class="btn" onclick="addVolunteerOffer()">Submit Offer</button>
+
+    <button class="btn secondary" onclick="goBack('volDashboard')">Go Back</button>
+  </div>
+
+  <!-- Support Dashboard -->
+  <div id="supDashboard" class="card hidden">
+    <h3>Volunteer Offers</h3>
+    <input id="searchSup" placeholder="Search offers by keyword">
+    <select id="filterSectorSup">
+      <option value="">All Sectors</option>
+      <option value="Health">Health</option>
+      <option value="Food">Food</option>
+      <option value="Education">Education</option>
+      <option value="Others">Others</option>
+    </select>
+    <div id="supList"></div>
+
+    <h4>Request Support</h4>
+    <input id="reqName" placeholder="Orphanage / Old Age Home Name" />
+    <input id="reqLocation" placeholder="Location" />
+    <select id="reqSector">
+      <option value="Health">Health</option>
+      <option value="Food">Food</option>
+      <option value="Education">Education</option>
+      <option value="Others">Others</option>
+    </select>
+    <textarea id="reqMsg" placeholder="What do you need?"></textarea>
+    <button class="btn" onclick="addSupportRequest()">Submit Request</button>
+
+    <button class="btn secondary" onclick="goBack('supDashboard')">Go Back</button>
+  </div>
+
+  <!-- History Section -->
+  <div id="historySection" class="card hidden">
+    <h3>📜 Full History</h3>
+    <div id="historyList"></div>
+    <button class="btn secondary" onclick="hideHistory()">Close History</button>
+  </div>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const demoName=document.getElementById('demoName');
+const demoPassword=document.getElementById('demoPassword');
+const btnLogin=document.getElementById('btnLogin');
+const loginStep=document.getElementById('loginStep');
+const choiceStepDiv=document.getElementById('choiceStep');
+const userNameSpan=document.getElementById('userName');
+
+const volDashboard=document.getElementById('volDashboard');
+const supDashboard=document.getElementById('supDashboard');
+const historySection=document.getElementById('historySection');
+
+const volList=document.getElementById('volList');
+const supList=document.getElementById('supList');
+const historyList=document.getElementById('historyList');
+
+const toast=document.getElementById('toast');
+
+// Load saved data
+let supportRequests=JSON.parse(localStorage.getItem("supportRequests"))||[];
+let volunteerOffers=JSON.parse(localStorage.getItem("volunteerOffers"))||[];
+let historyLog=JSON.parse(localStorage.getItem("historyLog"))||[];
+
+function saveData(){
+  localStorage.setItem("supportRequests", JSON.stringify(supportRequests));
+  localStorage.setItem("volunteerOffers", JSON.stringify(volunteerOffers));
+  localStorage.setItem("historyLog", JSON.stringify(historyLog));
+}
+
+// Toast
+function showToast(msg,success=true){ 
+  toast.textContent=msg; 
+  toast.style.background=success?'#28a745':'#d9534f'; 
+  toast.classList.add('show'); 
+  setTimeout(()=>toast.classList.remove('show'),3000); 
+}
+
+// Login
+btnLogin.addEventListener('click',()=>{
+  const name=demoName.value.trim();
+  const pwd=demoPassword.value.trim();
+  if(!name||!pwd){ showToast('Enter name and password',false); return;}
+  userNameSpan.textContent=name;
+  loginStep.classList.add('hidden');
+  choiceStepDiv.classList.remove('hidden');
+});
+
+// Choose dashboard
+document.getElementById('btnVolunteer').addEventListener('click',()=>{
+  choiceStepDiv.classList.add('hidden');
+  volDashboard.classList.remove('hidden');
+  renderVolList();
+});
+document.getElementById('btnSupport').addEventListener('click',()=>{
+  choiceStepDiv.classList.add('hidden');
+  supDashboard.classList.remove('hidden');
+  renderSupList();
+});
+
+// Go back
+function goBack(current){
+  if(current==='volDashboard'){ volDashboard.classList.add('hidden'); choiceStepDiv.classList.remove('hidden'); }
+  else { supDashboard.classList.add('hidden'); choiceStepDiv.classList.remove('hidden'); }
+}
+
+// Render volunteer dashboard
+function renderVolList(){
+  const filter=document.getElementById('filterSectorVol').value;
+  const query=document.getElementById('searchVol').value.toLowerCase();
+  let list=supportRequests.filter(r=>
+    (!filter||r.sector===filter) &&
+    (r.name.toLowerCase().includes(query)||r.msg.toLowerCase().includes(query)||r.location.toLowerCase().includes(query))
+  );
+  volList.innerHTML='';
+  if(list.length===0){ volList.innerHTML='<p>No requests found</p>'; return;}
+  list.forEach(r=>{
+    let div=document.createElement('div');
+    div.className='card';
+    div.innerHTML=`<b>${r.name}</b> <span class="badge ${r.sector}">${r.sector}</span><br>
+                   ${r.location}<br>${r.msg}<br>
+                   Status: <b>${r.status}</b><br>
+                   <button class="btn" onclick="updateStatusRequest('${r.name}','Accepted')">Accept</button>
+                   <button class="btn secondary" onclick="updateStatusRequest('${r.name}','Completed')">Complete</button>`;
+    volList.appendChild(div);
+  });
+}
+
+// Render support dashboard
+function renderSupList(){
+  const filter=document.getElementById('filterSectorSup').value;
+  const query=document.getElementById('searchSup').value.toLowerCase();
+  let list=volunteerOffers.filter(r=>
+    (!filter||r.sector===filter) &&
+    (r.name.toLowerCase().includes(query)||r.msg.toLowerCase().includes(query))
+  );
+  supList.innerHTML='';
+  if(list.length===0){ supList.innerHTML='<p>No volunteer offers</p>'; return;}
+  list.forEach(r=>{
+    let div=document.createElement('div');
+    div.className='card';
+    div.innerHTML=`<b>${r.name}</b> <span class="badge ${r.sector}">${r.sector}</span><br>
+                   ${r.msg}<br>
+                   Status: <b>${r.status}</b><br>
+                   <button class="btn" onclick="updateStatusOffer('${r.name}','Accepted')">Accept</button>
+                   <button class="btn secondary" onclick="updateStatusOffer('${r.name}','Completed')">Complete</button>`;
+    supList.appendChild(div);
+  });
+}
+
+// Accept/Complete actions + history log
+function updateStatusRequest(name,status){ 
+  let item=supportRequests.find(r=>r.name===name); 
+  if(item){ 
+    item.status=status; 
+    historyLog.push({type:'Request', name:item.name, sector:item.sector, msg:item.msg, status, time:new Date().toLocaleString()});
+    saveData(); 
+    renderVolList(); 
+    showToast(`${name} marked as ${status}`); 
+  } 
+}
+function updateStatusOffer(name,status){ 
+  let item=volunteerOffers.find(r=>r.name===name); 
+  if(item){ 
+    item.status=status; 
+    historyLog.push({type:'Offer', name:item.name, sector:item.sector, msg:item.msg, status, time:new Date().toLocaleString()});
+    saveData(); 
+    renderSupList(); 
+    showToast(`${name} marked as ${status}`); 
+  } 
+}
+
+// Add volunteer offer
+function addVolunteerOffer(){
+  const name=document.getElementById('volName').value.trim();
+  const sector=document.getElementById('volSector').value;
+  const msg=document.getElementById('volMsg').value.trim();
+  if(!name||!msg){ showToast('Fill all fields',false); return;}
+  let newOffer={name,sector,msg,status:'Pending'};
+  volunteerOffers.push(newOffer);
+  historyLog.push({type:'Offer', ...newOffer, time:new Date().toLocaleString()});
+  saveData();
+  document.getElementById('volName').value='';
+  document.getElementById('volMsg').value='';
+  renderSupList();
+  showToast('Offer submitted!');
+}
+
+// Add support request
+function addSupportRequest(){
+  const name=document.getElementById('reqName').value.trim();
+  const location=document.getElementById('reqLocation').value.trim();
+  const sector=document.getElementById('reqSector').value;
+  const msg=document.getElementById('reqMsg').value.trim();
+  if(!name||!location||!msg){ showToast('Fill all fields',false); return;}
+  let newReq={name,location,sector,msg,status:'Pending'};
+  supportRequests.push(newReq);
+  historyLog.push({type:'Request', ...newReq, time:new Date().toLocaleString()});
+  saveData();
+  document.getElementById('reqName').value='';
+  document.getElementById('reqLocation').value='';
+  document.getElementById('reqMsg').value='';
+  renderVolList();
+  showToast('Request submitted!');
+}
+
+// Filters
+document.getElementById('filterSectorVol').addEventListener('change',renderVolList);
+document.getElementById('filterSectorSup').addEventListener('change',renderSupList);
+document.getElementById('searchVol').addEventListener('input',renderVolList);
+document.getElementById('searchSup').addEventListener('input',renderSupList);
+
+// Dark/Light mode toggle
+const toggleMode=document.getElementById('toggleMode');
+if(localStorage.getItem("darkMode")==="true"){ document.body.classList.add("dark"); }
+toggleMode.addEventListener('click',()=>{
+  document.body.classList.toggle("dark");
+  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+});
+
+// View History
+document.getElementById('viewHistory').addEventListener('click',()=>{
+  historySection.classList.remove('hidden');
+  historyList.innerHTML='';
+  if(historyLog.length===0){ historyList.innerHTML='<p>No history yet</p>'; return; }
+  historyLog.slice().reverse().forEach(h=>{
+    let div=document.createElement('div');
+    div.className='card';
+    div.innerHTML=`<b>${h.type}</b>: ${h.name} <span class="badge ${h.sector}">${h.sector}</span><br>
+                   ${h.msg}<br>
+                   Status: <b>${h.status}</b><br>
+                   <small>${h.time}</small>`;
+    historyList.appendChild(div);
+  });
+});
+function hideHistory(){ historySection.classList.add('hidden'); }
+</script>
+
+</body>
+</html>
